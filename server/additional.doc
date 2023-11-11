@@ -1,0 +1,78 @@
+//post
+
+USING PROMISES
+router.post('/register', (req, res) => {
+
+    const { name, email, phone, password, cpassword } = req.body;
+
+    if (!name || !email || !phone || !password || !cpassword) {
+        return res.status(422).json({ error: "beta chalaki nai, sab likhna padega" });
+    }
+
+    User.findOne({ email: email })  //left wala db ka right wala user ka checks both if already exits in db then show error
+        .then((userExist) => {
+            if (userExist) {
+                return res.status(422).json({ error: "tu pehale se hi exist karta hai, nikal le" });
+            }
+                const user = new User({ name, email, phone, password, cpassword });
+                user.save().then(() => {
+                    res.status(201).json({ message: "inserted into database" });
+                }).catch(err => res.sendStatus(500).json({ error: "failed due to databased issue " }));
+            }).catch(err => { console.log(err); });
+
+
+
+
+    // console.log(name);  console the data which comes from user [web]
+    // console.log(phone);
+    // // console.log(req.body);
+    // res.send("mera register page")
+
+
+});
+
+
+// hashing method using BCRYPT
+const bcrypt = require('bcrypt');
+
+const hasing = async (pass) => {
+    const hash = await bcrypt.hash(pass, 4);
+    console.log(hash);
+}
+hasing("shivam");
+
+
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Find the user by email
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ error: 'Invalid credentials' });
+        }
+
+        // Compare the provided password with the hashed password
+        const passwordMatch = await bcrypt.compare(password, user.password);
+
+        if (!passwordMatch) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // Generate a JWT token
+            const token = await user.generateAuthToken();
+                console.log(token);
+
+                // Set the JWT token as a cookie (ensure you have the correct token)
+      res.cookie("jwtoken", token, {
+                    expires: new Date(Date.now() + 25892000000), // Set the expiration time
+                    httpOnly: true,
+                });
+
+        res.status(200).json({ message: 'Login successful' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
